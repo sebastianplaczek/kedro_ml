@@ -11,10 +11,10 @@ parameters:
       n_splits : 5
   charts_localisation : 'models_output//'
   save_charts:
-    roc
-    confusion_matrix
-    metrics
-    feature_importance
+    roc: True
+    confusion_matrix: True
+    metrics : True
+    feature_importance: True
   save_params: True
   mlflow: True
 

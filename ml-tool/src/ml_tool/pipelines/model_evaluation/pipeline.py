@@ -18,8 +18,8 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=validation,
-                inputs=["params:parameters", "X", "y", "model"],
-                outputs="test",
+                inputs=["params:parameters", "X", "y", "model", "features"],
+                outputs="scores",
                 name="validation",
             ),
         ]

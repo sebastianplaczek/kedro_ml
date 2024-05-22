@@ -44,4 +44,4 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     y = df["Transported"]
     X = df[features]
 
-    return X, y
+    return X, y, features

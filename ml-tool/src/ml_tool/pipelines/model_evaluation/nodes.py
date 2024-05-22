@@ -3,10 +3,10 @@ This is a boilerplate pipeline 'model_evaluation'
 generated using Kedro 0.19.5
 """
 
-from typing import Dict
+from typing import Dict, List
 import pandas as pd
 from .models import models_dict
-from .validations import validations_dict
+from .validations import Validate
 
 
 def model_selection(params: Dict):
@@ -18,8 +18,15 @@ def model_selection(params: Dict):
     return model
 
 
-def validation(params: Dict, X: pd.DataFrame, y: pd.Series, model):
-    validate = validations_dict[params["validation"]["validation_type"]]
-    scores = validate(params, X, y, model)
+def validation(params: Dict, X: pd.DataFrame, y: pd.Series, features: List, model):
 
-    return scores
+    val = Validate(
+        params,
+        X,
+        y,
+        features,
+        model,
+    )
+    val.run()
+
+    return val.scores

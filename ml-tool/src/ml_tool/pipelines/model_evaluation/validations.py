@@ -8,10 +8,14 @@ from sklearn.metrics import (
     mean_absolute_error,
     mean_squared_error,
 )
-
 from sklearn.model_selection import KFold
+
 from typing import Dict
 import pandas as pd
+import os
+from datetime import datetime
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def gini_normalized(y_test, y_pred):
@@ -32,11 +36,12 @@ metrics = {
 
 
 class Validate:
-    def __init__(self, params, X, y, model):
+    def __init__(self, params, X, y, model, features):
         self.params = params
         self.X = X
         self.y = y
         self.model = model
+        self.features = features
 
     def cross_validation(self):
 
@@ -44,15 +49,15 @@ class Validate:
 
         self.scores = {score: [] for score in self.params["model"]["model_scores"]}
         index = 0
-        for train_index, test_index in kf.split(X):
+        for train_index, test_index in kf.split(self.X):
             index += 1
             X_train, X_test = (
-                X.iloc[train_index],
-                X.iloc[test_index],
+                self.X.iloc[train_index],
+                self.X.iloc[test_index],
             )
             y_train, y_test = (
-                y.iloc[train_index],
-                y.iloc[test_index],
+                self.y.iloc[train_index],
+                self.y.iloc[test_index],
             )
 
             self.model.fit(X_train, y_train)
@@ -65,6 +70,91 @@ class Validate:
                 self.scores[score_name].append(score)
                 print(f"{score_name} : {score}")
 
+            self.create_avg_metrics()
+
+            if self.params["save_charts"]["roc"]:
+                self.plot_roc(X_test, y_test, index)
+            if self.params["save_charts"]["confusion_matrix"]:
+                self.plot_conf_matrix(X_test, y_test, index)
+            if self.params["save_charts"]["feature_importance"]:
+                self.feature_importance(index)
+            if self.params["save_charts"]["metrics"]:
+                self.plot_metrics()
+
     def choose_validation(self):
         validations_dict = {"cross_validation": self.cross_validation}
-        validations_dict[self.params["validation"]["validation_type"]]
+        validations_dict[self.params["validation"]["validation_type"]]()
+
+    def plot_roc(self, X_test, y_test, iteration):
+        y_probs = self.model.predict_proba(X_test)[:, 1]
+        fpr, tpr, _ = roc_curve(y_test, y_probs)
+        roc_auc = roc_auc_score(y_test, y_probs)
+        plt.figure()
+        plt.plot(
+            fpr,
+            tpr,
+            color="darkorange",
+            lw=2,
+            label="ROC curve (area = %0.2f)" % roc_auc,
+        )
+        plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("Receiver Operating Characteristic")
+        plt.legend(loc="lower right")
+        plt.savefig(self.model_output_path + "//" + f"roc_curve_{iteration}.png")
+
+    def plot_conf_matrix(self, y_test, y_pred, iteration):
+        cm = confusion_matrix(y_test, y_pred)
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(cm, annot=True, cmap="Blues", fmt="g")
+        plt.xlabel("Predicted labels")
+        plt.ylabel("True labels")
+        plt.title("Confusion Matrix")
+        plt.savefig(self.model_output_path + "//" + f"confusion_matrix_{iteration}.png")
+
+    def feature_importance(self, iteration):
+
+        plt.figure(figsize=(10, 6))
+        plt.barh(self.features, self.model.feature_importances_)
+        plt.xlabel("Feature Importance")
+        plt.ylabel("Features")
+        plt.title("Feature Importance Plot")
+
+        # Zapisz wykres do pliku graficznego
+        plt.savefig(
+            self.model_output_path + "//" + f"feature_importance_{iteration}.png"
+        )
+
+    def create_avg_metrics(self):
+        self.avg_metrics = {}
+        for score_name, score_list in self.scores.items():
+            self.avg_metrics[score_name] = np.mean(score_list)
+
+    def plot_metrics(self):
+        plt.figure(figsize=(10, 6))
+        for score_name, score_list in self.scores.items():
+            avg = np.mean(score_list)
+            splits = [str(x) for x in range(len(score_list))]
+            plt.scatter(splits, score_list, label=f"{score_name}")
+            plt.plot(splits, [avg for x in splits], label=f"{score_name}_avg")
+        plt.xlabel("score")
+        plt.ylabel("validation split number")
+        plt.title(f"Validation metrics")
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+        plt.savefig(self.model_output_path + "//" + "metrics.png")
+
+    def create_folder_if_not_exists(self, path):
+        if not os.path.exists(path):
+            os.makedirs(path)
+            print(f"Utworzono folder: {path}")
+        else:
+            print(f"Folder {folder_name} już istnieje.")
+
+    def run(self):
+        self.now = str(datetime.now()).replace(" ", "_").replace(":", "")
+        current_directory = os.getcwd()
+        folders = ["data", "output", self.now]
+        self.model_output_path = os.path.join(current_directory, *folders)
+        self.create_folder_if_not_exists(self.model_output_path)
+        self.choose_validation()
