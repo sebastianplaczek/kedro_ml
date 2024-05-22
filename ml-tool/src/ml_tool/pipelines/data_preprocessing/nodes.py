@@ -25,4 +25,23 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df["VIP"] = df["VIP"].astype(int)
     df["Cabin_num"] = df["Cabin_num"].astype(int)
 
-    return df
+    features = [
+        "HomePlanetLabeled",
+        "CryoSleep",
+        "DestinationLabeled",
+        "Age",
+        "VIP",
+        "RoomService",
+        "FoodCourt",
+        "ShoppingMall",
+        "Spa",
+        "VRDeck",
+        "Cabin_num",
+        "DeckLabeled",
+        "SideLabeled",
+    ]
+
+    y = df["Transported"]
+    X = df[features]
+
+    return X, y

@@ -1,17 +1,20 @@
-model_name : spaceship_titanic
-model_type: XGBClassifier
-model_params: default
-model_scores : ['accuracy','recall','precision','gini'] 
-#model_scores : ['MSE','MAE']
-validation_type: cross_validation
-validation_params:
-  n_splits : 5
-charts_localisation : 'models_output//'
-save_charts:
-  roc
-  confusion_matrix
-  metrics
-  feature_importance
-save_params: True
-mlflow: True
+parameters:
+  model:
+    model_name : spaceship_titanic
+    model_type: XGBClassifier
+    model_params: default
+    model_scores : ['accuracy','recall','precision','gini'] 
+    #model_scores : ['MSE','MAE']
+  validation:
+    validation_type: cross_validation
+    validation_params:
+      n_splits : 5
+  charts_localisation : 'models_output//'
+  save_charts:
+    roc
+    confusion_matrix
+    metrics
+    feature_importance
+  save_params: True
+  mlflow: True
 

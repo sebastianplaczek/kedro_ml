@@ -13,7 +13,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             node(
                 func=preprocess_dataframe,
                 inputs="df",
-                outputs="preprocessed_df",
+                outputs=["X", "y"],
                 name="preprocess_df_node",
             ),
         ]
