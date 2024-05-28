@@ -7,7 +7,11 @@ from sklearn.metrics import (
     confusion_matrix,
     mean_absolute_error,
     mean_squared_error,
+    root_mean_squared_error,
+    mean_absolute_percentage_error,
 )
+
+from functools import partial
 from sklearn.model_selection import KFold
 from sklearn.inspection import PartialDependenceDisplay
 
@@ -36,7 +40,9 @@ metrics = {
     "gini": gini_normalized,
     # regression
     "MSE": mean_squared_error,
+    "RMSE": root_mean_squared_error,
     "MAE": mean_absolute_error,
+    "MAPE": mean_absolute_percentage_error,
 }
 
 
