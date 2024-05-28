@@ -9,6 +9,7 @@ from sklearn.metrics import (
     mean_squared_error,
 )
 from sklearn.model_selection import KFold
+from sklearn.inspection import PartialDependenceDisplay
 
 from typing import Dict
 import pandas as pd
@@ -16,6 +17,10 @@ import os
 from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+
+import mlflow
+from mlflow.models import infer_signature
 
 
 def gini_normalized(y_test, y_pred):
@@ -75,11 +80,13 @@ class Validate:
             if self.params["save_charts"]["roc"]:
                 self.plot_roc(X_test, y_test, index)
             if self.params["save_charts"]["confusion_matrix"]:
-                self.plot_conf_matrix(X_test, y_test, index)
+                self.plot_conf_matrix(y_test, y_test, index)
             if self.params["save_charts"]["feature_importance"]:
                 self.feature_importance(index)
-            if self.params["save_charts"]["metrics"]:
-                self.plot_metrics()
+            if self.params["save_charts"]["partial_dependence"]["plot"]:
+                self.partial_dependence_plot(index)
+        if self.params["save_charts"]["metrics"]:
+            self.plot_metrics()
 
     def choose_validation(self):
         validations_dict = {"cross_validation": self.cross_validation}
@@ -121,9 +128,34 @@ class Validate:
         plt.ylabel("Features")
         plt.title("Feature Importance Plot")
 
-        # Zapisz wykres do pliku graficznego
         plt.savefig(
             self.model_output_path + "//" + f"feature_importance_{iteration}.png"
+        )
+
+    def partial_dependence_plot(self, iteration):
+        categorical_features = self.params["save_charts"]["partial_dependence"][
+            "cat_features"
+        ]
+        continuous_features = self.params["save_charts"]["partial_dependence"][
+            "cont_features"
+        ]
+
+        categorical_indices = [
+            self.X.columns.get_loc(col) for col in categorical_features
+        ]
+
+        fig, ax = plt.subplots(figsize=(15, 10))
+        ax.set_title("Partial Dependence Plots")
+        PartialDependenceDisplay.from_estimator(
+            estimator=self.model,
+            X=self.X,
+            features=list(range(self.X.shape[1])),  # plot all features
+            categorical_features=categorical_indices,  # categorical features indices
+            random_state=5,
+            ax=ax,
+        )
+        plt.savefig(
+            self.model_output_path + "//" + f"partial_dependence_{iteration}.png"
         )
 
     def create_avg_metrics(self):
@@ -138,8 +170,8 @@ class Validate:
             splits = [str(x) for x in range(len(score_list))]
             plt.scatter(splits, score_list, label=f"{score_name}")
             plt.plot(splits, [avg for x in splits], label=f"{score_name}_avg")
-        plt.xlabel("score")
-        plt.ylabel("validation split number")
+        plt.ylabel("score")
+        plt.xlabel("validation split number")
         plt.title(f"Validation metrics")
         plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
         plt.savefig(self.model_output_path + "//" + "metrics.png")
@@ -151,6 +183,23 @@ class Validate:
         else:
             print(f"Folder {folder_name} już istnieje.")
 
+    def run_mlflow(self):
+        mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
+        mlflow.set_experiment(f"{self.params['model']['model_name']}")
+        with mlflow.start_run():
+            if self.params["model"]["model_params"] != "default":
+                mlflow.log_params(self.params["model"]["model_params"])
+
+            mlflow.log_metrics(self.avg_metrics)
+            signature = infer_signature(self.X, self.model.predict(self.X))
+            model_info = mlflow.sklearn.log_model(
+                sk_model=self.model,
+                artifact_path="model",
+                signature=signature,
+                # input_example=self.X,
+                # registered_model_name="tracking-quickstart",
+            )
+
     def run(self):
         self.now = str(datetime.now()).replace(" ", "_").replace(":", "")
         current_directory = os.getcwd()
@@ -158,3 +207,6 @@ class Validate:
         self.model_output_path = os.path.join(current_directory, *folders)
         self.create_folder_if_not_exists(self.model_output_path)
         self.choose_validation()
+
+        if self.params["mlflow"]:
+            self.run_mlflow()

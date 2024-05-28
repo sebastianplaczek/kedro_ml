@@ -20,13 +20,7 @@ def model_selection(params: Dict):
 
 def validation(params: Dict, X: pd.DataFrame, y: pd.Series, features: List, model):
 
-    val = Validate(
-        params,
-        X,
-        y,
-        features,
-        model,
-    )
+    val = Validate(params, X, y, model, features)
     val.run()
 
     return val.scores

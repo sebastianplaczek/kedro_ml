@@ -15,6 +15,20 @@ parameters:
     confusion_matrix: True
     metrics : True
     feature_importance: True
+    partial_dependence:
+      plot: True 
+      cat_features: ["HomePlanetLabeled",
+        "CryoSleep",
+        "DestinationLabeled",
+        "VIP",
+        "RoomService",
+        "FoodCourt",
+        "ShoppingMall",
+        "Spa",
+        "VRDeck",
+        "DeckLabeled",
+        "SideLabeled"]
+      cont_features: ["Age","Cabin_num"]
   save_params: True
-  mlflow: True
+  mlflow: False
 
